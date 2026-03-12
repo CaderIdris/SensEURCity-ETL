@@ -50,7 +50,7 @@ A standalone Python program that performs a series of ETL operations on the open
 
 ## Configuration
 
-Flags can be appended to the command to configure the ETL pipeline e.g. `uv run senseurcity [OPTIONS]`.
+Flags can be appended to the command to configure the ETL pipeline e.g. `uv run senseurcity-etl [OPTIONS]`.
 
 #### Help
 
@@ -105,29 +105,32 @@ Other DBs are unsupported but may work if you install the required packages.
 
 ### Supported
 
+```bash
+uvx senseurcity-etl [OPTIONS]
+```
+
+### Development
+
 This tool was developed using `uv` to manage Python versions and dependencies. The easiest way to install this tool is to clone the repository and run `uv sync` in the project root.
-You can then run the tool using `uv run senseurcity [OPTIONS]`.
+You can then run the tool using `uv run senseurcity-etl [OPTIONS]`.
 
 ### Unsupported
 
-You may be able to run this tool directly using `uvx` via the github URL e.g. `uvx --from https://github.com/CaderIdris/SensEURCity-ETL senseurcity [OPTIONS]`. However, this is untested and your mileage may vary. 
-
-You can also set it up using the virtual environment tool built into python but the [requirements](./requirements.txt) file may not be kept up to date.
 
 ####  MacOS/Linux
 ```bash
 > python -m venv .venv
 > source .venv/bin/activate
-> pip install -r requirements.txt
-> senseurcity [OPTIONS]
+> pip install senseurcity-etl
+> senseurcity-etl [OPTIONS]
 ```
 
 #### Windows
 ```powershell
 > python -m venv .venv
 > .venv/Scripts/Activate.ps1
-> pip install -r requirements.txt
-> senseurcity [OPTIONS]
+> pip install senseurcity-etl
+> senseurcity-etl [OPTIONS]
 ```
 
 ---
@@ -260,6 +263,12 @@ It also undergoes a suite of static tests and linting.
 Of particular note are the DB tests in [test_orm.py](./tests/test_orm.py), which test all of the unique and foreign key constraints in each table for each DB, ensuring they all behave as intended.
 This is especially important for SQLite which has some weird behaviour, particularly as it doesn't strictly enforce foreign key constraints by default.
 It also means that behaviour shouldn't deviate depending on which DB the user chooses to use.
+
+Testing:
+
+```bash
+uvx --with tox-uv tox
+```
 
 ---
 
