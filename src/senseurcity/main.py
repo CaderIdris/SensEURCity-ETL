@@ -233,13 +233,13 @@ def get_cities(config: ProgramConfig) -> Cities:
     Cities
 
     """
-    cities = Cities(0)
+    cities: Cities = Cities(0)
     if config["antwerp"]:
-        cities = cities | cities.Antwerp
+        cities = cities | Cities.Antwerp
     if config["oslo"]:
-        cities = cities | cities.Oslo
+        cities = cities | Cities.Oslo
     if config["zagreb"]:
-        cities = cities | cities.Zagreb
+        cities = cities | Cities.Zagreb
     return cities
 
 
@@ -280,7 +280,10 @@ def upload_data_sqa(
     _iteration_count = 0
     with engine.connect() as conn:
         while True:
-            batch = [x for _, x in zip(range(batch_size), records, strict=False)]
+            batch = [
+                x for _, x
+                in zip(range(batch_size), records, strict=False)
+            ]
             if not batch:
                 break
             _iteration_count += 1
@@ -452,7 +455,11 @@ def cli() -> Literal[0]:
     upload_data_sqa(get_header_records(), orm.DimHeader, engine)
 
     logger.info("(L) Uploading unit conversion information")
-    upload_data_sqa(get_unit_conversion_records(), orm.DimUnitConversion, engine)
+    upload_data_sqa(
+        get_unit_conversion_records(),
+        orm.DimUnitConversion,
+        engine
+    )
 
     senseurcity_zip = ZipFile(zip_path)
 

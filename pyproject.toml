@@ -1,6 +1,6 @@
 [project]
-name = "senseurcity"
-version = "2.2.0"
+name = "senseurcity-etl"
+version = "2.3.0"
 requires-python = ">=3.12"
 description = "Reformat SensEURCity data to SQL DB"
 authors = [
@@ -27,10 +27,29 @@ requires = ["setuptools>=42.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project.scripts]
-senseurcity = "senseurcity.main:cli"
+"senseurcity-etl" = "senseurcity.main:cli"
 
 [tool.setuptools.package-data]
 "senseurcity.files.json" = ["*.json"]
+
+[dependency-groups]
+dev = [
+    "pdoc>=15.0.4",
+    "pytest>=8.4.2",
+    "pytest-cov>=7.0.0",
+    "pytest-html>=4.1.1",
+    "ruff>=0.13.1",
+    "testcontainers>=4.13.2",
+    "ty>=0.0.21",
+    "types-requests>=2.32.4.20250913",
+]
+dev-postgres = [
+    "psycopg[binary]>=3.2.12",
+    "testcontainers>=4.13.2",
+]
+postgres = [
+    "psycopg>=3.2.12",
+]
 
 [tool.pytest.ini_options]
 testpaths = [
@@ -53,67 +72,38 @@ addopts = [
 	"--cov=senseurcity"
 ]
 
-[tool.mypy]
-mypy_path = "src"
-check_untyped_defs = true
-disallow_any_generics = true
-ignore_missing_imports = true
-no_implicit_optional = true
-show_error_codes = true
-strict_equality = true
-warn_redundant_casts = true
-warn_return_any = true
-warn_unreachable = true
-warn_unused_configs = true
-no_implicit_reexport = true
-
 [tool.tox]
 requires = ["tox>=4.20"]
-env_list = ["py312", "py314", "ruff", "mypy"]
+env_list = ["py312", "py314", "ruff", "ty"]
 
 [tool.tox.env_run_base]
+runner = "uv-venv-lock-runner"
+# extras = ["dev"]
 description = "Run test under {base_python}"
-set_env = {PYTHONPATH = "{tox_root}"}
-deps = ["-r {tox_root}/requirements.txt"]
+# set_env = {PYTHONPATH = "{tox_root}"}
+# deps = ["-r {tox_root}/requirements.txt"]
 commands = [["pytest", "--basetemp={envtmpdir}"]]
 
 [tool.tox.env.ruff]
 description = "Run ruff linting and static tests"
-deps = ["-r {tox_root}/requirements.txt"]
+# deps = ["-r {tox_root}/requirements.txt"]
 commands = [["ruff", "check", "src", "tests"]]
 
-[tool.tox.env.mypy]
-description = "Run mypy static tests"
-deps = ["-r {tox_root}/requirements.txt"]
-commands = [["mypy", "src", "tests"]]
+[tool.tox.env.ty]
+description = "Run ty static tests"
+# deps = ["-r {tox_root}/requirements.txt"]
+commands = [["ty", "check", "src"]]
 
 [tool.tox.gh.python]
-"3.14" = ["3.14", "ruff", "mypy"]
+"3.14" = ["3.14", "ruff", "ty"]
 "3.12" = ["3.12"]
-
 
 [tool.pyright]
 venvPath = ""
 venv = ".venv"
 
-[dependency-groups]
-dev = [
-    "mypy>=1.18.2",
-    "pdoc>=15.0.4",
-    "pytest>=8.4.2",
-    "pytest-cov>=7.0.0",
-    "pytest-html>=4.1.1",
-    "ruff>=0.13.1",
-    "testcontainers>=4.13.2",
-    "types-requests>=2.32.4.20250913",
-]
-dev-postgres = [
-    "psycopg[binary]>=3.2.12",
-    "testcontainers>=4.13.2",
-]
-postgres = [
-    "psycopg>=3.2.12",
-]
+[tool.ruff]
+line-length = 79
 
 [tool.ruff.lint]
 select = [
@@ -154,11 +144,16 @@ select = [
 	"LOG",  # flake8-logging: Logging specific linting
 	"RUF",  # Ruff-specific-rules: Extra rules
 ]
+ignore = [
+	"D203",
+	"D213"
+]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*.py" = [
 	"D",
 	"ARG",
 	"ANN",
-	"S"
+	"S",
+	"T201"
 ]

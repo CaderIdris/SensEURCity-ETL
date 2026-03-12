@@ -205,8 +205,14 @@ def test_upload_to_sqa_not_generator(
     ):
         upload_data_sqa(
             [  # type: ignore[arg-type]
-                    {"filename": "hello", "timestamp": dt.datetime(2020, 1, 1)},
-                    {"filename": "hello2", "timestamp": dt.datetime(2020, 1, 1)}
+                    {
+                        "filename": "hello",
+                        "timestamp": dt.datetime(2020, 1, 1),
+                    },
+                    {
+                        "filename": "hello2",
+                        "timestamp": dt.datetime(2020, 1, 1),
+                    }
             ],
             orm.MetaFilesProcessed,
             db_engine

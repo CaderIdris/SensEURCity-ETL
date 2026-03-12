@@ -94,7 +94,7 @@ def _get_prefix(city: Cities) -> str:
         _logger.info("Iterating over Zagreb data")
         prefix = "Zagreb_*.csv"
     else:
-        msg = (  # type: ignore[unreachable]
+        msg = (
             "Unexpected city given. "
             "Please choose from Antwerp, Oslo or Zagreb"
         )

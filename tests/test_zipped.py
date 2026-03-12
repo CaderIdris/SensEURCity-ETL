@@ -96,7 +96,10 @@ class MockResponseBad:
 
 
 @pytest.mark.zipfile
-def test_download_zip(monkeypatch: pytest.MonkeyPatch, data_path: Path) -> None:
+def test_download_zip(
+    monkeypatch: pytest.MonkeyPatch,
+    data_path: Path,
+) -> None:
     """Test downloading a zip file using the `download_data` function.
 
     This test does not download any actual data, it uses a mock response
@@ -199,7 +202,11 @@ def test_bad_download(
     monkeypatch.setattr(requests, "get", mock_get)
 
     with caplog.at_level(logging.ERROR):
-        res = download_data("http://fakeurl", zip_path, ignore_file_exists=True)
+        res = download_data(
+            "http://fakeurl",
+            zip_path,
+            ignore_file_exists=True
+        )
 
     tests["Nothing returns"] = res is None
     tests["Error is logged"] = "HTTP Error: 404 Client Error" in caplog.text
@@ -315,7 +322,9 @@ def test_empty_zip(
     - Warning is logged that no csv files could be found for each city.
     """
     tests = {}
-    with caplog.at_level(logging.WARNING), zipfile.ZipFile(empty_mock_path) as sec_zip:
+    with \
+        caplog.at_level(logging.WARNING), \
+        zipfile.ZipFile(empty_mock_path) as sec_zip:
             list(get_csvs(sec_zip, valid_cities[0]))
 
     tests["Issue is logged"] = (

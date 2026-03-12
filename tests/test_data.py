@@ -9,7 +9,8 @@ from senseurcity.data import (
     SensEURCityCSV,
     get_device_records,
     get_header_records,
-    get_unit_conversion_records
+    get_unit_conversion_records,
+    hash_string
 )
 
 
@@ -44,34 +45,35 @@ def colocation_dataset() -> tuple[
         periods=test_df.shape[0],
         freq="1h"
     )
+
     expected_values = (
         (
-            "Test",
-            "A",
+            hash_string("Test"),
+            hash_string("A"),
             dt.datetime(2020, 1, 1),
             dt.datetime(2020, 1, 1) + dt.timedelta(hours=299),
         ),
         (
-            "Test",
-            "B",
+            hash_string("Test"),
+            hash_string("B"),
             dt.datetime(2020, 1, 1) + dt.timedelta(hours=398),
             dt.datetime(2020, 1, 1) + dt.timedelta(hours=597)
         ),
         (
-            "Test",
-            "A",
+            hash_string("Test"),
+            hash_string("A"),
             dt.datetime(2020, 1, 1) + dt.timedelta(hours=598),
             dt.datetime(2020, 1, 1) + dt.timedelta(hours=697)
         ),
         (
-            "Test",
-            "A",
+            hash_string("Test"),
+            hash_string("A"),
             dt.datetime(2020, 1, 1) + dt.timedelta(hours=998),
             dt.datetime(2020, 1, 1) + dt.timedelta(hours=998)
         ),
         (
-            "Test",
-            "C",
+            hash_string("Test"),
+            hash_string("C"),
             dt.datetime(2020, 1, 1) + dt.timedelta(hours=1000),
             dt.datetime(2020, 1, 1) + dt.timedelta(hours=1099)
         )
@@ -111,7 +113,9 @@ def test_read_zip(csv_path) -> None:
         csv_to_test.shape[1] - 1
     )
 
-    tests["Measurement cols have values"] = len(csv_dataclass.measurement_cols) > 0
+    tests["Measurement cols have values"] = (
+        len(csv_dataclass.measurement_cols) > 0
+    )
     tests["Flag cols have values"] = len(csv_dataclass.flag_cols) > 0
     tests["Ref cols have values"] = len(csv_dataclass.reference_cols) > 0
 
@@ -253,8 +257,8 @@ def test_colocation(
     )
     coloc = [
         (
-            i["device_key"],
-            i["other_key"],
+            i["hash_device"],
+            i["hash_other_device"],
             i["start_date"].to_pydatetime(),
             i["end_date"].to_pydatetime(),
         )
@@ -327,8 +331,8 @@ def test_get_ref_headers() -> None:
     )
     records = list(csv_dataclass.reference_headers)
     df = pd.DataFrame(records)
-    r801 = df[df["device_key"] == "ANT_REF_R801"]
-    r802 = df[df["device_key"] == "ANT_REF_R802"]
+    r801 = df[df["hash_device"] == hash_string("ANT_REF_R801")]
+    r802 = df[df["hash_device"] == hash_string("ANT_REF_R802")]
 
     tests["Correct num of headers (R801)"] = r801.shape[0] == 6
     tests["Correct num of headers (R802)"] = r802.shape[0] == 1

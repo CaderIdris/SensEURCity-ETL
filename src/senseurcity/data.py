@@ -2,6 +2,7 @@
 from collections.abc import Generator
 from dataclasses import dataclass
 import datetime as dt
+from hashlib import sha256
 from importlib.resources import files
 import json
 import logging
@@ -13,6 +14,11 @@ import pandas as pd
 
 _logger = logging.getLogger("SensEURCity-ETL")
 
+
+def hash_string(string: str) -> str:
+    """Generate sha256 hash of string."""
+    return sha256(string.encode()).hexdigest()
+
 class MeasurementRecord(TypedDict):
     """Structure of a dictionary returning a single measurement period.
 
@@ -20,8 +26,8 @@ class MeasurementRecord(TypedDict):
     ----------
     time : dt.datetime
         The time the measurement was taken.
-    device_key : str
-        The device making the measurement.
+    hash_device : str
+        SHA256 hash of the name of the device making the measurement.
     measurements : dict[str, float]
         The measurements made.
     flags : dict[str, str]
@@ -32,7 +38,7 @@ class MeasurementRecord(TypedDict):
     """
 
     time: dt.datetime
-    device_key: str
+    hash_device: str
     measurements: dict[str, float]
     flags: dict[str, str] | None
     meta: dict[str, float] | None
@@ -43,10 +49,10 @@ class ColocationRecord(TypedDict):
 
     Attributes
     ----------
-    device_key : str
-        The co-located device.
-    other_key : str
-        The device it was co-located with.
+    hash_device : str
+        SHA256 hash of the name of a device.
+    hash_other_device : str
+        SHA256 hash of the name of the device it is co-located with.
     start_date : pd.Timestamp
         The start of the co-location (inclusive).
     end_date : pd.Timestamp
@@ -54,8 +60,8 @@ class ColocationRecord(TypedDict):
 
     """
 
-    device_key: str
-    other_key: str
+    hash_device: str
+    hash_other_device: str
     start_date: pd.Timestamp
     end_date: pd.Timestamp
 
@@ -65,6 +71,8 @@ class HeaderRecord(TypedDict):
 
     Attributes
     ----------
+    hash_header : str
+        SHA256 hash of the measurement header.
     header : str
         The measurement header.
     parameter : str
@@ -76,6 +84,7 @@ class HeaderRecord(TypedDict):
 
     """
 
+    hash_header: str
     header: str
     parameter: str
     unit: str
@@ -87,6 +96,8 @@ class DeviceRecord(TypedDict):
 
     Attributes
     ----------
+    hash_device : str
+        SHA256 hash of the device name.
     key : str
         The device key.
     name : str
@@ -102,6 +113,7 @@ class DeviceRecord(TypedDict):
 
     """
 
+    hash_device : str
     key: str
     name: str
     short_name: str
@@ -115,22 +127,22 @@ class DeviceHeaderRecord(TypedDict):
 
     Attributes
     ----------
-    header : str
-        The measurement header.
-    device_key : str
-        The device measuring.
+    hash_header : str
+        SHA256 hash of the measurement header.
+    hash_device : str
+        SHA256 hash of the device name.
     flag : str
         An associated flag
 
     """
 
-    header: str
-    device_key: str
+    hash_header : str
+    hash_device: str
     flag: str | None
 
 
 class ConversionRecord(TypedDict):
-    """Expected structure of a dictionary returned as a single conversion record.
+    """Expected structure of a dict returned as a single conversion record.
 
     Attributes
     ----------
@@ -212,7 +224,8 @@ class SensEURCityCSV:
             DataFrame.
 
         """
-        # Check keyword arguments to ensure column is in csv and isn't protected
+        # Check keyword arguments to ensure column is in csv and isn't
+        # protected
         if date_col not in csv.columns:
             err_msg = (
                 f"'{date_col}' is not present in {name}.csv. Expected a "
@@ -246,7 +259,10 @@ class SensEURCityCSV:
             "Ref.Long",
         }
         _logger.info("%s reference columns found", len(reference_cols))
-        _logger.debug("Reference columns: %s", f'"{", ".join(reference_cols)}"')
+        _logger.debug(
+            "Reference columns: %s",
+            f'"{", ".join(reference_cols)}"'
+        )
 
         flag_cols = {
             col for col in csv.columns
@@ -261,11 +277,15 @@ class SensEURCityCSV:
             col[:-5] for col in flag_cols if col[:-5] in csv.columns
         }
         _logger.info("%s measurement columns found", len(measurement_cols))
-        _logger.debug("Measurement columns: %s", f'"{", ".join(measurement_cols)}"')
+        _logger.debug(
+            "Measurement columns: %s",
+            f'"{", ".join(measurement_cols)}"'
+        )
 
 
 
         # Parse date and calculate hash columns
+        csv = csv.astype({date_col: "object"})
         csv.loc[:, date_col] = pd.to_datetime(
             csv.loc[:, date_col],
             format="%Y-%m-%dT%H:%M:%SZ"
@@ -334,7 +354,7 @@ class SensEURCityCSV:
         for _, record in csv_subset.iterrows():
             row: MeasurementRecord =  {
                 "time": record[("index", "time")].to_pydatetime(),
-                "device_key": record[("index", "device_key")],
+                "hash_device": hash_string(record[("index", "device_key")]),
                 "measurements": record["measurements"].dropna().to_dict(),
                 "flags": record["flags"].to_dict(),
                 "meta": record["meta"].dropna().to_dict()
@@ -364,12 +384,16 @@ class SensEURCityCSV:
         )
         csv_subset[repeated] = np.nan
         csv_subset["time"] = csv_subset.index
-        csv_subset = csv_subset.rename(columns={self.location_col: "device_key"})
+        csv_subset = csv_subset.rename(
+            columns={self.location_col: "device_key"}
+        )
         for _, record in csv_subset.iterrows():
             row: MeasurementRecord = {
                 "time": record["time"].to_pydatetime(),
-                "device_key": record["device_key"],
-                "measurements": record[list(self.reference_cols)].dropna().to_dict(),
+                "hash_device": hash_string(record["device_key"]),
+                "measurements": record[
+                    list(self.reference_cols)
+                ].dropna().to_dict(),
                 "flags": None,
                 "meta": None
             }
@@ -383,8 +407,8 @@ class SensEURCityCSV:
 
         Represents an iterator containing dictionaries with the following keys:
 
-        - **device_key** : str
-        - **other_key** : str
+        - **hash_device** : str
+        - **hash_other_device** : str
         - **start_date** : dt.datetime
         - **end_date** : dt.datetime
         """
@@ -420,14 +444,15 @@ class SensEURCityCSV:
             .reset_index()
             .drop("Group", axis=1)
             .rename(
-                {self.location_col: "other_key"},
+                {self.location_col: "hash_other_device"},
                 axis=1
             )
             .sort_values("start_date")
         )
-        grouped["device_key"] = self.name
-        # for record in csv_subset.to_dict('records'):
-        #     yield record
+        grouped["hash_device"] = hash_string(self.name)
+        grouped["hash_other_device"] = (
+            grouped["hash_other_device"].apply(hash_string)
+        )
         for record in grouped.iterrows():
             yield record[1].to_dict()
 
@@ -447,8 +472,8 @@ class SensEURCityCSV:
         ].dropna(axis=1, how="all").columns
         device_headers: list[DeviceHeaderRecord] = [
             {
-                "device_key": self.name,
-                "header": header,
+                "hash_device": hash_string(self.name),
+                "hash_header": hash_string(header),
                 "flag": (
                     f"{header}_flag" if f"{header}_flag"
                     in self.flag_cols else None
@@ -488,9 +513,12 @@ class SensEURCityCSV:
             )
             device_headers.extend([
                 {
-                    "device_key": loc,
-                    "header": (
-                        f"{header.replace(".", "_")}_{city_match[loc[:3].upper()]}"
+                    "hash_device": hash_string(loc),
+                    "hash_header": hash_string(
+                        (
+                            f"{header.replace(".", "_")}_"
+                            f"{city_match[loc[:3].upper()]}"
+                        )
                         if re.match(measurement_match, header) else
                         header.replace(".", "_")
                     ),
@@ -514,8 +542,10 @@ def get_header_records() -> Generator[HeaderRecord]:
     with header_file.open("r") as header_json:
         header_info = json.load(header_json)
     for json_l in header_info:
+        header = json_l.pop("header")
         record: HeaderRecord = {
-            "header": json_l.pop("header"),
+            "hash_header": hash_string(header),
+            "header": header,
             "parameter": json_l.pop("parameter"),
             "unit": json_l.pop("unit"),
             "other": {}
@@ -537,8 +567,10 @@ def get_device_records() -> Generator[DeviceRecord]:
     with device_file.open("r") as device_json:
         device_info = json.load(device_json)
     for json_l in device_info:
+        dev_key = json_l.pop("key")
         record: DeviceRecord = {
-            "key": json_l.pop("key"),
+            "hash_device": hash_string(dev_key),
+            "key": dev_key,
             "name": json_l.pop("name"),
             "short_name": json_l.pop("short_name"),
             "dataset": "SensEURCity",
